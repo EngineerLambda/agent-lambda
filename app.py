@@ -3,24 +3,23 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.callbacks.base import BaseCallbackHandler
 from agent import agent_executor
 from database import get_chat_sessions, create_chat_session, prepare_chat_history, add_message_to_session
-import asyncio
 
-# Custom Streamlit callback to surface tool usage and agent events
+# callback to surface tool usage and agent events
 class StreamlitCallbackHandler(BaseCallbackHandler):
     def __init__(self, status):
         self.status = status
 
     def on_agent_action(self, action, **kwargs):
         self.action = action
-        self.status.text(f"Searching the internet for: `{action.tool_input.get("query")}`")
+        self.status.update(label=f"Searching the internet for: `{action.tool_input.get("query")}`")
 
     def on_tool_start(self, tool, input_str, **kwargs):
-        self.status.text(f"Processing Search for: `{self.action.tool_input.get("query")}`")
+        self.status.update(label=f"Processing Search for: `{self.action.tool_input.get("query")}`")
 
     def on_tool_end(self, output, **kwargs):
-        self.status.text("Aggregating search results")
+        self.status.update(label="Aggregating search results")
 
-# Manage session state
+# session state
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.email = ""
@@ -35,7 +34,7 @@ if not st.experimental_user.is_logged_in:
     st.title("Agent Lambda")
     st.info("Please log in to continue. Without login, chats are not saved.")
 
-    if st.button("Continue with Google"):
+    if st.button("CONTINUE WITH GOOGLE"):
         st.login("google")
     st.stop()
 else:
@@ -47,7 +46,7 @@ else:
 with st.sidebar:
     st.header(f"Welcome, {st.session_state.username}")
 
-    # Create new chat session
+    # create new chat session
     with st.expander("Create New Chat"):
         with st.form("session_create"):
             session_title = st.text_input("New session title")
@@ -61,7 +60,7 @@ with st.sidebar:
                 else:
                     st.error("Session title cannot be empty.")
 
-    # Select existing sessions
+    # choose from existing sessions
     sessions = list(get_chat_sessions(user_id=st.session_state.email))[::-1]
     if sessions:
         selected_session = st.selectbox(
@@ -76,7 +75,7 @@ with st.sidebar:
     else:
         st.warning("No sessions found. Create a new one to get started.")
 
-    # Logout section
+    # logout
     with st.expander("LOGOUT"):
         st.warning("Are you sure you want to logout?")
         if st.button("Confirm Logout"):
@@ -89,7 +88,7 @@ with st.sidebar:
 if st.session_state.logged_in and st.session_state.session_selected:
     st.title("Agent Lambda")
 
-    # Retrieve chat history
+    # chat history
     messages = prepare_chat_history(
         user_id=st.session_state.email,
         session_name=st.session_state.session_title,
@@ -101,7 +100,7 @@ if st.session_state.logged_in and st.session_state.session_selected:
         elif isinstance(message, AIMessage):
             st.chat_message("assistant").markdown(message.content)
 
-    # Chat input
+    # input to agent
     prompt = st.chat_input("Ask your questions ...")
     if prompt:
         st.chat_message("user").markdown(prompt)
@@ -114,7 +113,6 @@ if st.session_state.logged_in and st.session_state.session_selected:
 
         with st.status("Processing your request...", expanded=True) as status:
             try:
-                status.text("Analysing your query...")
                 callback_handler = StreamlitCallbackHandler(status)
 
                 response = agent_executor.invoke(
@@ -126,7 +124,7 @@ if st.session_state.logged_in and st.session_state.session_selected:
                 )
 
                 output = response["output"]
-                status.text("Done! Displaying response...")
+                status.update(label="Done! Displaying response...", state="complete")
 
                 with st.chat_message("ai"):
                     st.markdown(output)
@@ -139,8 +137,8 @@ if st.session_state.logged_in and st.session_state.session_selected:
                 )
 
             except Exception as e:
-                error_message = "I am sorry, I am currently unable to help with that. Can you rephrase?"
-                status.text(f"An error occurred: {e}")
+                error_message = "I am sorry, I am currently unable to help with that, probably rate limit has been exceeded since I am a free model. Can you try again later?"
+                status.update(label=f"An error occurred {e}", state="error")
                 st.chat_message("ai").write(error_message)
                 add_message_to_session(
                     user_id=st.session_state.email,
