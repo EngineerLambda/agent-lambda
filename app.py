@@ -81,10 +81,10 @@ for key, default_value in default_session_state.items():
 
 # --- Authentication ---
 if not st.experimental_user.is_logged_in:
-    col1, col_main, col3 = st.columns([1, 4, 1])
+    col1, col_main, col3 = st.columns([1, 5, 1])
 
     with col_main:
-        st.title("Agent Lambda", anchor=False)
+        st.header(f"Agent Lambda: AI Assistant app", anchor=False)
 
         # Create a container for a bordered look
         with st.container(border=True):
