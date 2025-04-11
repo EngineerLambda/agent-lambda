@@ -189,13 +189,13 @@ with st.sidebar:
     with st.expander("LOGOUT / DELETE ALL SESSIONS"):
         if st.button("Confirm Logout"):
             # Clear relevant session state keys
-            keys_to_clear = [
-                "logged_in", "email", "username",
-                "current_session_id", "current_session_title",
-                "needs_title", "session_selected"
-            ]
-            for key in keys_to_clear:
-                st.session_state.pop(key, None)
+            # keys_to_clear = [
+            #     "logged_in", "email", "username",
+            #     "current_session_id", "current_session_title",
+            #     "needs_title", "session_selected"
+            # ]
+            # for key in keys_to_clear:
+            #     st.session_state.pop(key, None)
             st.logout()
         if st.button("Delete All Sessions"):
             deleted_count = delete_all_sessions_for_user(st.session_state.email)
