@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 import pandas as pd
 from database import feedback_collection
@@ -18,7 +17,7 @@ if "logged_in" not in st.session_state:
     st.session_state.email = ""
 
 if not st.session_state.logged_in:
-    st.info("Kindly note that you are giving feedback as an anonymous user, you can also login to do that so that we can proper keep track of things`")
+    st.info("Kindly note that you are giving feedback as an anonymous user, you can also login (Go back to Home page) to do that so that we can proper keep track of things")
     with st.form("feebback_offline"):
         user = st.text_input("Please supply a name/nickname (optional)")
         rating = st.feedback(options="stars")
@@ -41,7 +40,7 @@ if not st.session_state.logged_in:
                     st.error("Error encountered while trying to submit feedback, try again")
             
 else:
-    if not st.session_state.email == os.getenv("ADMIN_EMAIL"):
+    if not st.session_state.email == st.secrets.get("ADMIN_EMAIL").strip():
         with st.form("feebback_online"):
             user = st.session_state.email
             rating = st.feedback(options="stars")
@@ -66,16 +65,24 @@ else:
         
         all_feedbacks = feedback_collection.find()
         df = pd.DataFrame(list(all_feedbacks))
-        df = df.drop(columns=["_id"])
+        if not df.empty:
+            df = df.drop(columns=["_id"])
         
-        st.table(df)
+            st.table(df)
+        else:
+            st.warning("Nothing to see here, yet")
         
-        with st.sidebar:
-            with st.expander("LOGOUT"):
-                st.warning("Are you sure you want to logout?")
-                with st.spinner("Signing Out ..."):
-                    if st.button("Confirm Logout"):
-                        st.session_state.logged_in = False
-                        st.session_state.session_selected = False
-                        st.session_state.session_title = ""
-                        st.rerun()
+    with st.sidebar:
+        st.divider()
+        # Logout
+        with st.expander("LOGOUT"):
+            if st.button("Confirm Logout"):
+                # Clear relevant session state keys
+                keys_to_clear = [
+                    "logged_in", "email", "username",
+                    "current_session_id", "current_session_title",
+                    "needs_title", "session_selected"
+                ]
+                for key in keys_to_clear:
+                    st.session_state.pop(key, None)
+                st.logout()

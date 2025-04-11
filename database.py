@@ -8,66 +8,112 @@ import os
 
 @st.cache_resource
 def prepare_db_coll(coll_name):
-    client = MongoClient(os.getenv("DATABASE_URL"))
-    database = client["lambda"]
+    # Ensure DATABASE_URL is set in your environment variables
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        st.error("DATABASE_URL environment variable not set.")
+        st.stop()
+    client = MongoClient(db_url)
+    # Consider adding error handling for connection issues
+    try:
+        # The ismaster command is cheap and does not require auth.
+        client.admin.command('ismaster')
+    except:
+        st.error("MongoDB server not available.")
+        st.stop()
+
+    database = client["lambda"] # Consider making db name configurable
     collection = database[coll_name]
     return collection
 
 message_collection = prepare_db_coll("chat_history")
-# users_collection = prepare_db_coll("user_collection")
 feedback_collection = prepare_db_coll("feedbacks")
 
-# more helper functions
-def create_chat_session(user_id, session_name):
+# --- Session Management ---
+
+def create_chat_session(user_id: str, session_name: str = "New Chat"):
+    """Creates a new chat session with a default or provided name."""
     session_id = ObjectId()
+    timestamp = datetime.datetime.now(datetime.timezone.utc) # Use timezone-aware datetime
     message_collection.insert_one({
+        "_id": session_id, # Use _id for the session's unique identifier
         "user_id": user_id,
         "session_name": session_name,
-        "session_id": session_id,
+        "created_at": timestamp,
+        "last_updated": timestamp,
         "messages": []
     })
     return session_id
 
-# Helper function to add a message to a chat session
-def add_message_to_session(user_id, session_name, content, kind):
+def update_session_name(session_id: ObjectId, new_session_name: str):
+    """Updates the name of a specific chat session."""
     message_collection.update_one(
+        {"_id": session_id},
         {
-            "user_id": user_id,
-            "session_name": session_name
-        },
+            "$set": {
+                "session_name": new_session_name,
+                "last_updated": datetime.datetime.now(datetime.timezone.utc)
+             }
+        }
+    )
+
+def add_message_to_session(session_id: ObjectId, content: str, kind: str):
+    """Adds a message to a chat session identified by its ObjectId."""
+    message_collection.update_one(
+        {"_id": session_id},
         {
             "$push": {
                 "messages": {
                     "content": content,
                     "kind": kind,
-                    "timestamp": datetime.datetime.now()
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc)
                 }
+            },
+            "$set": { # Also update the last_updated timestamp
+                 "last_updated": datetime.datetime.now(datetime.timezone.utc)
             }
         }
     )
 
-
-# helper function to fetch all chat sessions for a user
-def get_chat_sessions(user_id):
-    sessions = list(message_collection.find({"user_id": user_id}))
+def get_chat_sessions(user_id: str):
+    """Fetches all chat sessions for a user, returning (id, name) tuples."""
+    # Sort by creation time, newest first
+    sessions = message_collection.find(
+        {"user_id": user_id},
+        {"_id": 1, "session_name": 1} # Project only needed fields
+    ).sort("created_at", -1) # Sort by creation time descending
+    # Use yield for memory efficiency if many sessions are expected
     for session in sessions:
-        yield session["session_name"]
+        yield (session["_id"], session["session_name"])
 
-# helper function to fetch messages from a specific session
-def prepare_chat_history(user_id: str, session_name: str, chat_history_limit: int):
-    # fetching the specific session for the user
-    session = message_collection.find_one({"user_id": user_id, "session_name": session_name})
+def prepare_chat_history(session_id: ObjectId, chat_history_limit: int):
+    """Fetches messages from a specific session identified by its ObjectId."""
+    session = message_collection.find_one({"_id": session_id})
     chat_history = []
 
     if session:
+        # Get messages, ensuring 'messages' key exists
         messages = session.get("messages", [])
-        
-        # adding messages to the chat history up to the specified limit
-        for msg in messages[:chat_history_limit]:
-            if msg["kind"] == "user":
-                chat_history.append(HumanMessage(content=msg["content"]))
-            elif msg["kind"] == "ai":
-                chat_history.append(AIMessage(content=msg["content"]))
-    
+        # Get the latest messages up to the limit
+        start_index = max(0, len(messages) - chat_history_limit)
+        relevant_messages = messages[start_index:]
+
+        for msg in relevant_messages:
+            # Check if 'kind' exists in msg, default to handling potential missing keys
+            kind = msg.get("kind")
+            content = msg.get("content", "") # Default to empty string if content missing
+            if kind == "user":
+                chat_history.append(HumanMessage(content=content))
+            elif kind == "ai":
+                chat_history.append(AIMessage(content=content))
+
     return chat_history
+
+def delete_all_sessions_for_user(user_id: str):
+    """
+    Deletes all chat sessions associated with a given user ID.
+    """
+    result = message_collection.delete_many({"user_id": user_id})
+    return result.deleted_count
+
 

@@ -14,8 +14,6 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from dotenv import load_dotenv; load_dotenv()
 
-# os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
-# os.environ["GOOGLE_API_KEY"] = st.secrets("")
 # System Prompt Template
 system_prompt_template = f"""Be a helpful and respectful assitant"""
 
@@ -35,7 +33,7 @@ prompt = ChatPromptTemplate(chat_prompts)
 # llm = ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0)
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
-search_desc = "search tool based on tavily, useful when users have questions and you dont have answers to them, questions asking for latest info. input should be a search query."
+search_desc = "search tool based on tavily, useful when users ask questions and you don't have answers to them, such as questions asking for latest info. input should be a search query."
 search = TavilySearchResults(description=search_desc)
 tools = [search]
 agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
