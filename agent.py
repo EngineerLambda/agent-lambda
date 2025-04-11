@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from langchain_groq import ChatGroq
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI; ChatGoogleGenerativeAI.model_rebuild()
 from langchain.prompts import PromptTemplate
 from langchain_core.prompts import (
     HumanMessagePromptTemplate,
