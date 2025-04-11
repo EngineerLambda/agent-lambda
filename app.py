@@ -80,58 +80,59 @@ for key, default_value in default_session_state.items():
         st.session_state[key] = default_value
 
 # --- Authentication ---
-if not st.experimental_user.is_logged_in:
-    col1, col_main, col3 = st.columns([1, 4, 1])
+if "is_logged_in" in st.experimental_user:
+    if not st.experimental_user.is_logged_in:
+        col1, col_main, col3 = st.columns([1, 4, 1])
 
-    with col_main:
-        st.title("Agent Lambda", anchor=False)
+        with col_main:
+            st.title("Agent Lambda", anchor=False)
 
-        # Create a container for a bordered look
-        with st.container(border=True):
-            st.markdown("<br>", unsafe_allow_html=True) # Add a little space inside top border
-            google_logo_url = "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-            st.markdown(
-                f"""
-                <div style="display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px;">
-                    <img src="{google_logo_url}" width="25" height="25" style="margin-right: 10px; vertical-align: middle;">
-                    <!-- The button itself will be rendered below by Streamlit -->
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            # Create a container for a bordered look
+            with st.container(border=True):
+                st.markdown("<br>", unsafe_allow_html=True) # Add a little space inside top border
+                google_logo_url = "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                st.markdown(
+                    f"""
+                    <div style="display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px;">
+                        <img src="{google_logo_url}" width="25" height="25" style="margin-right: 10px; vertical-align: middle;">
+                        <!-- The button itself will be rendered below by Streamlit -->
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-            btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
-            with btn_col2:
-                 login_pressed = st.button("Continue with Google", use_container_width=True)
+                btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
+                with btn_col2:
+                    login_pressed = st.button("Continue with Google", use_container_width=True)
 
-            if login_pressed:
-                try:
-                    st.login()
-                
-                except Exception as e:
-                    st.error(f"An error occurred during login setup: {e}")
+                if login_pressed:
+                    try:
+                        st.login()
+                    
+                    except Exception as e:
+                        st.error(f"An error occurred during login setup: {e}")
 
-            st.markdown("<br>", unsafe_allow_html=True) # Add space before bottom border
+                st.markdown("<br>", unsafe_allow_html=True) # Add space before bottom border
 
-    st.stop() # Stop execution for non-logged-in users after showing the login page
-else:
-    # Update session state only if not already logged in or user changed
-    if not st.session_state.logged_in or st.session_state.email != st.experimental_user.email:
-        st.session_state.logged_in = True
-        st.session_state.email = st.experimental_user.email
-        st.session_state.username = st.experimental_user.name
-        # Reset session selection on new login
-        st.session_state.current_session_id = None
-        st.session_state.current_session_title = ""
-        st.session_state.needs_title = False
-        st.session_state.session_selected = False
+        st.stop() # Stop execution for non-logged-in users after showing the login page
+    else:
+        # Update session state only if not already logged in or user changed
+        if not st.session_state.logged_in or st.session_state.email != st.experimental_user.email:
+            st.session_state.logged_in = True
+            st.session_state.email = st.experimental_user.email
+            st.session_state.username = st.experimental_user.name
+            # Reset session selection on new login
+            st.session_state.current_session_id = None
+            st.session_state.current_session_title = ""
+            st.session_state.needs_title = False
+            st.session_state.session_selected = False
 
 
 # --- Sidebar ---
 with st.sidebar:
     st.header(f"Welcome, {st.session_state.username}")
-
-    # Create New Chat Button (no form needed now)
+    
+    # new chat
     if st.button("➕ Create New Chat"):
         # Create session with default name
         new_session_id = create_chat_session(user_id=st.session_state.email)
