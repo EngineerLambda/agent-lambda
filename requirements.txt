@@ -11,6 +11,5 @@ pandas==2.2.3
 pydantic==2.9.2
 streamlit==1.44.0
 Authlib
-dropbox
 pypdf2
 python-docx
