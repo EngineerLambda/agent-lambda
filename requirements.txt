@@ -13,3 +13,4 @@ streamlit==1.44.0
 Authlib
 pypdf2
 python-docx
+faiss-cpu
