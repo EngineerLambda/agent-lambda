@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from database import feedback_collection
+from utils.database import feedback_collection
 from dotenv import load_dotenv; load_dotenv()
 
 st.header("Provide feedback to app developer")
@@ -63,26 +63,12 @@ else:
     else:
         st.header("Admin section for all feedbacks")
         
-        all_feedbacks = feedback_collection.find()
-        df = pd.DataFrame(list(all_feedbacks))
-        if not df.empty:
-            df = df.drop(columns=["_id"])
-        
-            st.table(df)
-        else:
-            st.warning("Nothing to see here, yet")
-        
-    with st.sidebar:
-        st.divider()
-        # Logout
-        with st.expander("LOGOUT"):
-            if st.button("Confirm Logout"):
-                # Clear relevant session state keys
-                keys_to_clear = [
-                    "logged_in", "email", "username",
-                    "current_session_id", "current_session_title",
-                    "needs_title", "session_selected"
-                ]
-                for key in keys_to_clear:
-                    st.session_state.pop(key, None)
-                st.logout()
+        with st.spinner("Loading feedbacks"):
+            all_feedbacks = feedback_collection.find()
+            df = pd.DataFrame(list(all_feedbacks))
+            if not df.empty:
+                df = df.drop(columns=["_id"])
+            
+                st.table(df)
+            else:
+                st.warning("Nothing to see here, yet")

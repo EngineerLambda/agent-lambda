@@ -1,8 +1,4 @@
-import os
-import streamlit as st
-# from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
 from langchain_core.prompts import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
@@ -12,12 +8,18 @@ from langchain_core.prompts import (
 )
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from dotenv import load_dotenv; load_dotenv()
+from dotenv import load_dotenv
 
-# System Prompt Template
-system_prompt_template = f"""Be a helpful and respectful assitant"""
+load_dotenv()
 
-# Prompt Setup
+system_prompt_template = """Be a helpful and respectful assistant.
+You don't ask the user to provide the document context and you dont mention the name of the tools you have to them
+your task is to call the necesaary tools to answer the user question
+* Think step-by-step to fulfill the user's request using the available tools.
+* Prioritize using `document_search` to get information from the document before attempting other actions related to the document (unless the QA tool is requested).
+* Only ask the user for clarification if essential information (like the number of QA pairs or a specific search query) is missing.
+"""
+
 chat_prompts = [
     SystemMessagePromptTemplate(
         prompt=PromptTemplate(template=system_prompt_template)
@@ -30,14 +32,34 @@ chat_prompts = [
 ]
 
 prompt = ChatPromptTemplate(chat_prompts)
-# llm = ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0)
+
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
-search_desc = "search tool based on tavily, useful when users ask questions and you don't have answers to them, such as questions asking for latest info. input should be a search query."
-search = TavilySearchResults(description=search_desc)
-tools = [search]
-agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+def get_search_tool() -> TavilySearchResults:
+    """Returns the Tavily search tool instance."""
+    search_desc = "Search tool based on Tavily. Useful when users ask questions requiring general knowledge or recent information beyond the provided document context. Input should be a search query."
+    return TavilySearchResults(description=search_desc, name="tavily_search_results_json")
 
+def get_agent_executor(tools: list) -> AgentExecutor:
+    """
+    Creates and returns an AgentExecutor configured with the provided tools.
 
-            
+    Args:
+        tools (list): A list of Langchain tools for the agent.
+
+    Returns:
+        AgentExecutor: The configured agent executor instance.
+    """
+    if not tools:
+        tools = [get_search_tool()]
+    elif not any(isinstance(t, TavilySearchResults) for t in tools):
+        tools.append(get_search_tool())
+
+    agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
+    agent_executor = AgentExecutor(
+        agent=agent,
+        tools=tools,
+        verbose=True,
+        handle_parsing_errors=True
+    )
+    return agent_executor
