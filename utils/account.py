@@ -41,18 +41,19 @@ with st.expander("Delete All Chat Sessions"):
         
 st.divider()
 st.subheader("Admin Section")
-if st.experimental_user.email == os.environ.get("ADMIN_EMAIL"):
-    users = get_unique_users_and_session_counts()
-    if users:
-        with st.spinner("Loading unique users and session counts..."):
-            st.metric(
-                label="Total Unique Users",
-                value=len(users),
-                delta=None,
-                help="Total number of unique users in the system.",
-                border=True          
-                )
-            st.divider()
-            df = pd.DataFrame(users)
-            df.columns = ["User ID", "Session Count"]
-            st.dataframe(df, use_container_width=True)
+if st.experimental_user.is_logged_in:
+    if st.experimental_user.email == os.environ.get("ADMIN_EMAIL"):
+        users = get_unique_users_and_session_counts()
+        if users:
+            with st.spinner("Loading unique users and session counts..."):
+                st.metric(
+                    label="Total Unique Users",
+                    value=len(users),
+                    delta=None,
+                    help="Total number of unique users in the system.",
+                    border=True          
+                    )
+                st.divider()
+                df = pd.DataFrame(users)
+                df.columns = ["User ID", "Session Count"]
+                st.dataframe(df, use_container_width=True)
