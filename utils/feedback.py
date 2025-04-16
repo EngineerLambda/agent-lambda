@@ -3,7 +3,7 @@ import pandas as pd
 from utils.database import feedback_collection
 from dotenv import load_dotenv; load_dotenv()
 
-st.header("Provide feedback to app developer")
+st.subheader("Provide feedback to app developer")
 
 def handle_feedback(rating: int, feed_back: str, user:str):
     feedback_collection.insert_one({
@@ -12,11 +12,8 @@ def handle_feedback(rating: int, feed_back: str, user:str):
         "feedback": feed_back
     })
     
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.email = ""
 
-if not st.session_state.logged_in:
+if not st.experimental_user.is_logged_in:
     st.info("Kindly note that you are giving feedback as an anonymous user, you can also login (Go back to Home page) to do that so that we can proper keep track of things")
     with st.form("feebback_offline"):
         user = st.text_input("Please supply a name/nickname (optional)")
@@ -40,7 +37,7 @@ if not st.session_state.logged_in:
                     st.error("Error encountered while trying to submit feedback, try again")
             
 else:
-    if not st.session_state.email == st.secrets.get("ADMIN_EMAIL").strip():
+    if not st.experimental_user.email == st.secrets.get("ADMIN_EMAIL").strip():
         with st.form("feebback_online"):
             user = st.session_state.email
             rating = st.feedback(options="stars")
@@ -61,7 +58,8 @@ else:
                     except:
                         st.error("Error encountered while trying to submit feedback, try again")
     else:
-        st.header("Admin section for all feedbacks")
+        st.divider()
+        st.write("Admin section for all feedbacks")
         
         with st.spinner("Loading feedbacks"):
             all_feedbacks = feedback_collection.find()
@@ -69,6 +67,6 @@ else:
             if not df.empty:
                 df = df.drop(columns=["_id"])
             
-                st.table(df)
+                st.dataframe(df, use_container_width=True)
             else:
                 st.warning("Nothing to see here, yet")

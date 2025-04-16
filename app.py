@@ -231,7 +231,7 @@ else:
 
 
 with st.sidebar:
-    st.header(f"Welcome, {st.session_state.username}")
+    st.write(f"Welcome, {st.session_state.username}")
 
     if st.button("➕ Create New Chat"):
         try:
@@ -251,7 +251,64 @@ with st.sidebar:
 
 
     st.divider()
+    if st.session_state.session_selected:
+        uploader_key = f"file_uploader_{st.session_state.current_session_id}" if st.session_state.current_session_id else "file_uploader_default"
+        uploaded_file = st.file_uploader(
+            "Upload PDF or DOCX (Optional)",
+            type=["pdf", "docx"],
+            key=uploader_key
+        )
 
+        if uploaded_file is not None and uploaded_file.file_id != st.session_state.get("processed_file_id"):
+            try:
+                with st.spinner(f"Processing file: {uploaded_file.name}..."):
+                    loader = LambdaStreamlitLoader(uploaded_file)
+                    docs = list(loader.lazy_load())
+
+                    if docs:
+                        st.session_state.file_docs = docs
+                        st.session_state.processed_file_id = uploaded_file.file_id
+                        st.success(f"File '{uploaded_file.name}' uploaded successfully! Preparing document tools...")
+
+                        current_tools = [get_search_tool()]
+
+                        rag_tool = create_rag_tool(st.session_state.file_docs)
+                        if rag_tool:
+                            current_tools.append(rag_tool)
+
+                        qa_tool = qa_generation
+                        current_tools.append(qa_tool)
+
+                        st.session_state.tools = current_tools
+                        st.session_state.downloadable_csv = None
+
+                        st.rerun()
+
+                    else:
+                        st.warning(f"Could not extract content from '{uploaded_file.name}'. Tools requiring document context will not be added.")
+                        st.session_state.processed_file_id = uploaded_file.file_id
+                        st.session_state.file_docs = None
+                        st.session_state.tools = [get_search_tool()]
+                        st.session_state.downloadable_csv = None
+                        st.rerun()
+
+            except Exception as e:
+                st.error(f"Failed to process file: {e}")
+                st.session_state.processed_file_id = uploaded_file.file_id
+                st.session_state.file_docs = None
+                st.session_state.tools = [get_search_tool()]
+                st.session_state.downloadable_csv = None
+                st.rerun()
+
+        if st.session_state.get("file_docs"):
+            st.info(f"File loaded. Document tools active.")
+        elif st.session_state.get("processed_file_id") and not st.session_state.get("file_docs"):
+             st.warning("A file was processed, but no content was loaded or an error occurred.")
+    else:
+        st.info("Select or create a chat to enable file upload.")
+    
+
+    st.divider()
     try:
         sessions_list = list(get_chat_sessions(user_id=st.session_state.email))
     except Exception as e:
@@ -313,64 +370,7 @@ with st.sidebar:
 
     else:
         st.warning("No previous chats found. Create one!")
-
-    st.divider()
-
-    if st.session_state.session_selected:
-        uploader_key = f"file_uploader_{st.session_state.current_session_id}" if st.session_state.current_session_id else "file_uploader_default"
-        uploaded_file = st.file_uploader(
-            "Upload PDF or DOCX (Optional)",
-            type=["pdf", "docx"],
-            key=uploader_key
-        )
-
-        if uploaded_file is not None and uploaded_file.file_id != st.session_state.get("processed_file_id"):
-            try:
-                with st.spinner(f"Processing file: {uploaded_file.name}..."):
-                    loader = LambdaStreamlitLoader(uploaded_file)
-                    docs = list(loader.lazy_load())
-
-                    if docs:
-                        st.session_state.file_docs = docs
-                        st.session_state.processed_file_id = uploaded_file.file_id
-                        st.success(f"File '{uploaded_file.name}' uploaded successfully! Preparing document tools...")
-
-                        current_tools = [get_search_tool()]
-
-                        rag_tool = create_rag_tool(st.session_state.file_docs)
-                        if rag_tool:
-                            current_tools.append(rag_tool)
-
-                        qa_tool = qa_generation
-                        current_tools.append(qa_tool)
-
-                        st.session_state.tools = current_tools
-                        st.session_state.downloadable_csv = None
-
-                        st.rerun()
-
-                    else:
-                        st.warning(f"Could not extract content from '{uploaded_file.name}'. Tools requiring document context will not be added.")
-                        st.session_state.processed_file_id = uploaded_file.file_id
-                        st.session_state.file_docs = None
-                        st.session_state.tools = [get_search_tool()]
-                        st.session_state.downloadable_csv = None
-                        st.rerun()
-
-            except Exception as e:
-                st.error(f"Failed to process file: {e}")
-                st.session_state.processed_file_id = uploaded_file.file_id
-                st.session_state.file_docs = None
-                st.session_state.tools = [get_search_tool()]
-                st.session_state.downloadable_csv = None
-                st.rerun()
-
-        if st.session_state.get("file_docs"):
-            st.info(f"File loaded. Document tools active.")
-        elif st.session_state.get("processed_file_id") and not st.session_state.get("file_docs"):
-             st.warning("A file was processed, but no content was loaded or an error occurred.")
-    else:
-        st.info("Select or create a chat to enable file upload.")
+    
 
 
 if st.session_state.logged_in and st.session_state.session_selected and st.session_state.current_session_id:
@@ -424,7 +424,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
         title_generated_in_this_run = False
         if st.session_state.needs_title:
             try:
-                with st.spinner("Generating title..."):
+                with st.spinner("Generating title"):
                     base_title = generate_title_llm(prompt_text)
                 new_unique_title = update_session_name(session_id_to_use, base_title)
                 if new_unique_title:

@@ -1,5 +1,9 @@
+import os
 import streamlit as st
+from yarg import get
 from utils.database import delete_all_sessions_for_user
+from utils.database import get_unique_users_and_session_counts
+import pandas as pd
 
 st.markdown(
     f"""
@@ -35,3 +39,21 @@ with st.expander("Delete All Chat Sessions"):
     if st.button("Clear All Chats"):
         deleted_count = delete_all_sessions_for_user(st.session_state.email)
         st.success(f"Deleted {deleted_count} session(s)")
+        
+st.divider()
+st.subheader("Admin Section")
+if st.experimental_user.email == os.environ.get("ADMIN_EMAIL"):
+    users = get_unique_users_and_session_counts()
+    if users:
+        with st.spinner("Loading unique users and session counts..."):
+            st.metric(
+                label="Total Unique Users",
+                value=len(users),
+                delta=None,
+                help="Total number of unique users in the system.",
+                border=True          
+                )
+            st.divider()
+            df = pd.DataFrame(users)
+            df.columns = ["User ID", "Session Count"]
+            st.dataframe(df, use_container_width=True)

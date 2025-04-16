@@ -113,3 +113,19 @@ def delete_all_sessions_for_user(user_id: str):
     """
     result = message_collection.delete_many({"user_id": user_id})
     return result.deleted_count
+
+# function to get all unique users and their session counts
+def get_unique_users_and_session_counts():
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$user_id",
+                "count": {"$sum": 1}
+            }
+        },
+        {
+            "$sort": {"count": -1}
+        }
+    ]
+    result = message_collection.aggregate(pipeline)
+    return [(user["_id"], user["count"]) for user in result]
