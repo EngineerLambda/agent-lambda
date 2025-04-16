@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-from yarg import get
 from utils.database import delete_all_sessions_for_user
 from utils.database import get_unique_users_and_session_counts
 import pandas as pd
