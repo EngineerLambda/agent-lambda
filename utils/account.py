@@ -7,8 +7,8 @@ import pandas as pd
 st.markdown(
     f"""
     <div style="display: flex; align-items: center; margin-bottom: 20px;">
-        <img src="{st.experimental_user.picture}" width="40" height="40" style="border-radius: 50%; margin-right: 10px; vertical-align: middle;">
-        <span style="font-size: 1.1em;">{st.experimental_user.name}</span>
+        <img src="{st.user.picture}" width="40" height="40" style="border-radius: 50%; margin-right: 10px; vertical-align: middle;">
+        <span style="font-size: 1.1em;">{st.user.name}</span>
     </div>
     """,
     unsafe_allow_html=True
@@ -39,10 +39,11 @@ with st.expander("Delete All Chat Sessions"):
         deleted_count = delete_all_sessions_for_user(st.session_state.email)
         st.success(f"Deleted {deleted_count} session(s)")
         
-st.divider()
-st.subheader("Admin Section")
-if st.experimental_user.is_logged_in:
-    if st.experimental_user.email == os.environ.get("ADMIN_EMAIL"):
+
+if st.user.is_logged_in:
+    if st.user.email == os.environ.get("ADMIN_EMAIL"):
+        st.divider()
+        st.subheader("Admin Section")
         users = get_unique_users_and_session_counts()
         if users:
             with st.spinner("Loading unique users and session counts..."):

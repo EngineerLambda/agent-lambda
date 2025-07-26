@@ -13,7 +13,7 @@ def handle_feedback(rating: int, feed_back: str, user:str):
     })
     
 
-if not st.experimental_user.is_logged_in:
+if not st.user.is_logged_in:
     st.info("Kindly note that you are giving feedback as an anonymous user, you can also login (Go back to Home page) to do that so that we can proper keep track of things")
     with st.form("feebback_offline"):
         user = st.text_input("Please supply a name/nickname (optional)")
@@ -37,7 +37,7 @@ if not st.experimental_user.is_logged_in:
                     st.error("Error encountered while trying to submit feedback, try again")
             
 else:
-    if not st.experimental_user.email == st.secrets.get("ADMIN_EMAIL").strip():
+    if not st.user.email == st.secrets.get("ADMIN_EMAIL").strip():
         with st.form("feebback_online"):
             user = st.session_state.email
             rating = st.feedback(options="stars")
