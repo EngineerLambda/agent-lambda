@@ -330,7 +330,11 @@ with st.sidebar:
 
     if st.button("➕ New Chat"):
         try:
-            new_session_id, unique_name = create_chat_session(user_id=st.session_state.email, session_name="New Chat")
+            new_session_id, unique_name = create_chat_session(
+                user_id=st.session_state.email, 
+                session_name="New Chat"
+            )
+            # Update session state
             st.session_state.current_session_id = new_session_id
             st.session_state.current_session_title = unique_name
             st.session_state.needs_title = True
@@ -339,7 +343,11 @@ with st.sidebar:
             st.session_state.file_docs = None
             st.session_state.tools = [get_search_tool()]
             st.session_state.downloadable_csv = None
-            st.success("New chat created. Send your first message!")
+            
+            # Update URL parameter immediately
+            st.query_params.s = unique_name
+            
+            # Remove success message to avoid delay
             st.rerun()
         except Exception as e:
             st.error(f"Failed to create new chat: {e}")
