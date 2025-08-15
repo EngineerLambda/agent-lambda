@@ -5,7 +5,6 @@ st.set_page_config(
     page_title="Agent Lambda",
     page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="expanded"
 )
 cwd = os.getcwd()
 main_page = st.Page(page=os.path.join(cwd, "app.py"), title="Home", icon="🏠")
