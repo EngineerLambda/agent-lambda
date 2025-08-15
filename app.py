@@ -258,7 +258,7 @@ def activate_latest_chat():
                 # Get the last session (most recent)
                 latest_session_name = sessions[0][1]  # [1] gets the unique_name
                 latest_session_id = sessions[0][0]    # [0] gets the session_id
-                
+
                 # Update session state
                 st.session_state.current_session_id = latest_session_id
                 st.session_state.current_session_title = latest_session_name
@@ -267,7 +267,7 @@ def activate_latest_chat():
                 st.session_state.processed_file_id = None
                 st.session_state.file_docs = None
                 st.session_state.tools = [get_search_tool()]
-                
+
                 # Update URL parameter
                 st.query_params.s = latest_session_name
                 return True
@@ -331,7 +331,7 @@ with st.sidebar:
     if st.button("➕ New Chat"):
         try:
             new_session_id, unique_name = create_chat_session(
-                user_id=st.session_state.email, 
+                user_id=st.session_state.email,
                 session_name="New Chat"
             )
             # Update session state
@@ -343,10 +343,10 @@ with st.sidebar:
             st.session_state.file_docs = None
             st.session_state.tools = [get_search_tool()]
             st.session_state.downloadable_csv = None
-            
+
             # Update URL parameter immediately
             st.query_params.s = unique_name
-            
+
             # Remove success message to avoid delay
             st.rerun()
         except Exception as e:
@@ -399,8 +399,29 @@ with st.sidebar:
                 st.rerun()
 
     else:
-        st.warning("No previous chats found. Create one!")
-    
+        try:
+            new_session_id, unique_name = create_chat_session(
+                user_id=st.session_state.email,
+                session_name="New Chat"
+            )
+            # Update session state
+            st.session_state.current_session_id = new_session_id
+            st.session_state.current_session_title = unique_name
+            st.session_state.needs_title = True
+            st.session_state.session_selected = True
+            st.session_state.processed_file_id = None
+            st.session_state.file_docs = None
+            st.session_state.tools = [get_search_tool()]
+            st.session_state.downloadable_csv = None
+
+            # Update URL parameter immediately
+            st.query_params.s = unique_name
+
+            # Remove success message to avoid delay
+            st.rerun()
+        except Exception as e:
+            st.error(f"Failed to create new chat: {e}")
+
 
 
 if st.session_state.logged_in and st.session_state.session_selected and st.session_state.current_session_id:
@@ -458,7 +479,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
         prompt_text = prompt.text if prompt.text else "Uploaded files"
         if prompt.text:
             st.chat_message("user").markdown(prompt.text)
-            
+
             # Title generation logic
             if st.session_state.needs_title:
                 try:
@@ -480,7 +501,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
             with st.status("Processing uploaded files...", expanded=True) as status:
                 for uploaded_file in prompt.files:
                     status.update(label=f"Processing {uploaded_file.name}...")
-                    
+
                     try:
                         loader = LambdaStreamlitLoader(uploaded_file)
                         docs = list(loader.lazy_load())
@@ -489,7 +510,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
                             # Display images in chat
                             if any(doc.metadata.get("type") == "image" for doc in docs):
                                 st.chat_message("user").markdown(
-                                    f"Uploaded image: {uploaded_file.name}\n\n" + 
+                                    f"Uploaded image: {uploaded_file.name}\n\n" +
                                     "\n".join(doc.page_content for doc in docs if doc.metadata.get("type") == "image")
                                 )
                             else:
@@ -514,7 +535,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
                             status.update(label=f"Successfully processed {uploaded_file.name}", state="complete")
                         else:
                             status.update(label=f"No content extracted from {uploaded_file.name}", state="error")
-                            
+
                     except Exception as e:
                         status.update(label=f"Error processing {uploaded_file.name}: {e}", state="error")
 
@@ -540,7 +561,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
 
         agent_input = {"input": prompt_text, "chat_history": messages}
         current_tools = st.session_state.get("tools", [get_search_tool()])
-        
+
         try:
             agent_executor = get_agent_executor(tools=current_tools)
         except Exception as agent_init_e:
@@ -557,10 +578,10 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
 
                 output = response.get("output", "Sorry, I couldn't process that.")
                 status.update(label="Done!", state="complete", expanded=True)
-                
+
                 with st.chat_message("assistant"):
                     st.markdown(str(output))
-                    
+
                 try:
                     add_message_to_session(
                         session_id=session_id_to_use,
@@ -571,7 +592,7 @@ if st.session_state.logged_in and st.session_state.session_selected and st.sessi
                     st.error(f"Failed to save AI response: {e}")
 
                 st.rerun()
-                
+
             except Exception as e:
                 error_message = f"An error occurred while processing your request: {e}. Please try again."
                 if "rate limit" in str(e).lower() or "429" in str(e):
